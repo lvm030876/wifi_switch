@@ -4,7 +4,6 @@ EepromClass eepromapi;
 RellayClass rellay(1);
 Ticker blinker, sensor, alloff;
 ESP8266WebServer HTTP(80);
-RCSwitch mySwitch = RCSwitch();
 IRsend irsend(IR_PIN);
 
 void setup() {
@@ -14,8 +13,6 @@ void setup() {
 	pinMode(LED_PIN, OUTPUT);
 	blinker.attach(0.5, tickBlink);
 	pinMode(RESET_PIN, INPUT);
-	// attachInterrupt(RESET_PIN, reset_WIFI_cfg, FALLING);
-	mySwitch.enableReceive(SEN_PIN);
 	irsend.begin();
 	eepromapi.eeprom_init();
 	sensor.attach(0.1, sensorTik);
@@ -47,42 +44,31 @@ void loop() {
 	HTTP.handleClient();
 	MDNS.update();
 }
-
-void sensorTik(){
-	lightStatus = map(analogRead(A0), 0, 1024, 100, 0);
-	pirStatus = digitalRead(PIR_PIN);
-	if (pirStatus == 1) pirDo();
-	// if (reset_cfg) smart_res();
-	if (digitalRead(RESET_PIN) == 0) {
-		if (resetTick++ > 100) smart_res();
-	} else resetTick = 0;
-	if (mySwitch.available()) {
-		rfCode = mySwitch.getReceivedValue();
-		if (rfCode > 0) {
-			IOTconfig customVar = eepromapi.eeprom_get();
-			if (rfCode == customVar.rfAOn) {
-				alloff.detach();
-				rellay.rellay(1, 3, 3);
-			}
-			if (rfCode == customVar.rfBOn) {
-				alloff.detach();
-				rellay.rellay(3, 1, 3);
-			}
-			if (rfCode == customVar.rfCOn) {
-				alloff.detach();
-				rellay.rellay(3, 3, 1);
-			}
-			if (rfCode == customVar.rfOn) {
-				alloff.detach();
-				rellay.rellay(1, 1, 1);
-			}
-			if (rfCode == customVar.rfOff) {
-				alloff.detach();
-				rellay.rellay(0, 0, 0);
-			}
+	rfCode = rf_loop();
+	if (rfCode > 0) {
+		IOTconfig customVar = eepromapi.eeprom_get();
+		if (rfCode == customVar.rfAOn) {
+			alloff.detach();
+			rellay.rellay(1, 3, 3);
 		}
-		mySwitch.resetAvailable();
+		if (rfCode == customVar.rfBOn) {
+			alloff.detach();
+			rellay.rellay(3, 1, 3);
+		}
+		if (rfCode == customVar.rfCOn) {
+			alloff.detach();
+			rellay.rellay(3, 3, 1);
+		}
+		if (rfCode == customVar.rfOn) {
+			alloff.detach();
+			rellay.rellay(1, 1, 1);
+		}
+		if (rfCode == customVar.rfOff) {
+			alloff.detach();
+			rellay.rellay(0, 0, 0);
+		}
 	}
+}
 }
 
 void pirDo(){
@@ -113,10 +99,6 @@ void smart_res() {
 	delay(5000);
 	ESP.reset();
 }
-
-// void ICACHE_RAM_ATTR reset_WIFI_cfg() {
-// 	reset_cfg = true;	
-// }
 
 void startServer() {
     HTTP.on("/", HTTP_GET, [](){HTTP.send(200, "text/html", homeIndex);});
