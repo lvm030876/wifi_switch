@@ -1,6 +1,3 @@
-#ifndef setauto_h
-#define setauto_h
-
 const char* pirIndex = R"=====(
 <!DOCTYPE html>
 <html>
@@ -92,4 +89,3 @@ const char* pirIndex = R"=====(
 	</body>
 </html>
 )=====";
-#endif

@@ -1,6 +1,3 @@
-#ifndef irstat_h
-#define irstat_h
-
 const char* irIndex = R"=====(
 <!DOCTYPE html>
 <html>
@@ -215,4 +212,3 @@ const char* irIndex = R"=====(
 	</body>
 </html>
 )=====";
-#endif

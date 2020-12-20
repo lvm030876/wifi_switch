@@ -1,6 +1,3 @@
-#ifndef rfstat_h
-#define rfstat_h
-
 const char* rfIndex = R"=====(
 <!DOCTYPE html>
 <html>
@@ -105,5 +102,3 @@ const char* rfIndex = R"=====(
 	</body>
 </html>
 )=====";
-
-#endif

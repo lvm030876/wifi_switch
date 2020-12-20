@@ -1,10 +1,60 @@
-#include "config.h"
+#include "Arduino.h"
+#include <ESP8266mDNS.h>
+#include "Ticker.h"
+#include <ESP8266WiFi.h>
+#include <ESP8266WebServer.h>
+#include <ESP8266httpUpdate.h>
+#include "IRremoteESP8266.h"
+#include "IRsend.h"
+#include "WiFiManager.h"
+#include "RCSwitch.h"
+#include "eepromapi.h"
+#include "relayapi.h"
+#include "INDEXhtm.h"
+#include "IPhtm.h"
+#include "AUTOhtm.h"
+#include "RFhtm.h"
+#include "IRhtm.h"
+#include <WiFiUdp.h>
+#include "RCSwitch.h"
 
+#define LED_PIN 2
+#define RESET_PIN 0
+#define PIR_PIN 5	//датчик руху
+#define IR_PIN 4	//RS пульт	4
+#define SEN_PIN 1	//радіомодуль	1
+#define debugSerial Serial1
+
+void startServer();
+void tickBlink();
+void smart_res();
+void switch_xml();
+void switch_json();
+void pir_xml();
+void pir_json();
+void rf_xml();
+// void rf_json();
+void reset_alarm();
+void switch_web();
+void mem_set();
+void pirDo();
+void sensorTik();
+void rfTik();
+void ir_web();
+
+int lightStatus, pirStatus, alarmStatus;
+unsigned long rfCode;
+int resetTick = 0;
+
+const char* upgradeIndex = R"=====(<form method='POST' action='/update' enctype='multipart/form-data'><input type='file' name='update'><input type='submit' value='Update'></form>)=====";
+
+RCSwitch mySwitch = RCSwitch();
 EepromClass eepromapi;
 RellayClass rellay(1);
-Ticker blinker, sensor, alloff;
+Ticker blinker, sensor, alloff, rfTimer;
 ESP8266WebServer HTTP(80);
 IRsend irsend(IR_PIN);
+WiFiUDP udp;
 
 void setup() {
 	debugSerial.begin(115200);
@@ -13,6 +63,8 @@ void setup() {
 	pinMode(LED_PIN, OUTPUT);
 	blinker.attach(0.5, tickBlink);
 	pinMode(RESET_PIN, INPUT);
+	mySwitch.enableReceive(SEN_PIN);
+	rfTimer.attach(0.01, rfTik);
 	irsend.begin();
 	eepromapi.eeprom_init();
 	sensor.attach(0.1, sensorTik);
@@ -35,6 +87,7 @@ void setup() {
 	if (MDNS.begin("iot_home", WiFi.localIP())) {
 		debugSerial.println("MDNS responder started");
 	}
+	udp.begin(8266);
 	blinker.detach();
 	digitalWrite(LED_PIN, HIGH);
 	startServer();
@@ -43,9 +96,28 @@ void setup() {
 void loop() {
 	HTTP.handleClient();
 	MDNS.update();
+	int packetSize = udp.parsePacket();
+	if(packetSize) {
+		char packetBuffer[10];
+		udp.read(packetBuffer, 10);
+		String udpRead = packetBuffer;
+		if (udpRead.indexOf("Who") != -1){
+			char IP[] = "xxx.xxx.xxx.xxx";
+			WiFi.localIP().toString().toCharArray(IP, 16);
+			// IPAddress broadcastIp(192,168,1,255);
+			IPAddress broadcastIp = WiFi.localIP();
+			broadcastIp[3] = 255;
+			udp.beginPacket(broadcastIp, 8266);
+			udp.write("switch: ");
+			udp.write(IP);
+			udp.endPacket();
+		}
+	}
 }
-	rfCode = rf_loop();
-	if (rfCode > 0) {
+
+void rfTik(){
+	if (mySwitch.available()) {
+		rfCode = mySwitch.getReceivedValue();
 		IOTconfig customVar = eepromapi.eeprom_get();
 		if (rfCode == customVar.rfAOn) {
 			alloff.detach();
@@ -67,8 +139,18 @@ void loop() {
 			alloff.detach();
 			rellay.rellay(0, 0, 0);
 		}
+		mySwitch.resetAvailable();
 	}
 }
+
+void sensorTik(){
+	lightStatus = map(analogRead(A0), 0, 1024, 100, 0);
+	pirStatus = digitalRead(PIR_PIN);
+	if (pirStatus == 1) pirDo();
+	// if (reset_cfg) smart_res();
+	if (digitalRead(RESET_PIN) == 0) {
+		if (resetTick++ > 100) smart_res();
+	} else resetTick = 0;
 }
 
 void pirDo(){
@@ -97,6 +179,7 @@ void smart_res() {
 	WiFi.disconnect(true);
 	eepromapi.eeprom_clr();
 	delay(5000);
+	ESP.eraseConfig();
 	ESP.reset();
 }
 
