@@ -2,6 +2,10 @@
 #include <ESP8266WiFi.h>
 
 struct IOTconfig{
+  int start;
+  int wifimode;
+  char STA_ssid[32];
+  char STA_pass[32];
   int dhc;
   IPAddress statIp;
   int pirTime;
@@ -12,7 +16,6 @@ struct IOTconfig{
   unsigned long rfCOn;
   unsigned long rfOn;
   unsigned long rfOff;
-  int start;
 };
 
 class EepromClass {
@@ -31,7 +34,10 @@ class EepromClass {
 void EepromClass::eeprom_init() {
 	EEPROM.begin(512);
 	eeprom_load();
-	if (_customVar.start != 0xaa55) {
+	// Serial.print(_len);
+	if (_customVar.start != _len) {
+		_customVar.wifimode = 0;
+		_customVar.dhc = 0;
 		_customVar.pirTime = 0;
 		_customVar.pirLight = 0;
 		_customVar.pirGroup = 0;
@@ -40,7 +46,7 @@ void EepromClass::eeprom_init() {
 		_customVar.rfCOn = 0;
 		_customVar.rfOn = 0;
 		_customVar.rfOff = 0;
-		_customVar.start = 0xaa55;
+		_customVar.start = _len;
 		eeprom_save();
 	}
 }
@@ -57,7 +63,14 @@ void EepromClass::eeprom_save() {
 
 void EepromClass::eeprom_load() {
 	char date[_len];
-	for (int i = 0; i < _len; i++) date[i] = EEPROM.read(i);
+	for (int i = 0; i < _len; i++) {
+    date[i] = EEPROM.read(i);
+	  // Serial.print(i);
+	  // Serial.print(" => ");
+	  // Serial.print((int)date[i], HEX);
+	  // Serial.print(" => ");
+	  // Serial.println(date[i]);
+    }
 	memcpy((char*)&_customVar, date, _len);
     EEPROM.commit();
 }
