@@ -306,27 +306,27 @@ void mem_set() {
 	}
 	if (HTTP.arg("rfAOn") != "") {
 		t =  HTTP.arg("rfAOn").toInt();
-		customVar.rfAOn = (t < 0)? 0:(t > 0)? t: rfCode;
+		customVar.rfAOn = (t <= 0)? 0: rfCode;
 		flag = true;
 	}
 	if (HTTP.arg("rfBOn") != "") {
 		t =  HTTP.arg("rfBOn").toInt();
-		customVar.rfBOn = (t < 0)? 0:(t > 0)? t: rfCode;
+		customVar.rfBOn = (t <= 0)? 0: rfCode;
 		flag = true;
 	}
 	if (HTTP.arg("rfCOn") != "") {
 		t =  HTTP.arg("rfCOn").toInt();
-		customVar.rfCOn = (t < 0)? 0:(t > 0)? t: rfCode;
+		customVar.rfCOn = (t <= 0)? 0: rfCode;
 		flag = true;
 	}
 	if (HTTP.arg("rfOn") != "") {
 		t =  HTTP.arg("rfOn").toInt();
-		customVar.rfOn = (t < 0)? 0:(t > 0)? t: rfCode;
+		customVar.rfOn = (t <= 0)? 0: rfCode;
 		flag = true;
 	}
 	if (HTTP.arg("rfOff") != "") {
 		t =  HTTP.arg("rfOff").toInt();
-		customVar.rfOff = (t < 0)? 0:(t > 0)? t: rfCode;
+		customVar.rfOff = (t <= 0)? 0: rfCode;
 		flag = true;
 	}
 	if (flag) eepromapi.eeprom_set(customVar);
