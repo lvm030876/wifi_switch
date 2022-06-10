@@ -19,7 +19,7 @@
 
 int lightStatus, pirStatus, alarmStatus;
 unsigned long rfCode;
-int resetTick = 0;
+int resetTick, rfBounce = 0;
 
 EepromClass eepromapi;
 IOTconfig customVar;
@@ -131,13 +131,18 @@ void sensorTik(){
 	if (digitalRead(RESET_PIN) == 0) {
 		if (resetTick++ > 100) smart_res();
 	} else resetTick = 0;
+	rfBounce++;
 	if (mySwitch.available()) {
-		rfCode = mySwitch.getReceivedValue();
-		if (rfCode == customVar.rfAOn) cmdGo(2, 3, 3);
-		if (rfCode == customVar.rfBOn) cmdGo(3, 2, 3);
-		if (rfCode == customVar.rfCOn) cmdGo(3, 3, 2);
-		if (rfCode == customVar.rfOn) cmdGo(1, 1, 1);
-		if (rfCode == customVar.rfOff) cmdGo(0, 0, 0);
+		unsigned long temp = mySwitch.getReceivedValue();
+		if ((temp != rfCode) || ((temp == rfCode) && (rfBounce > 10))){
+			rfBounce = 0;
+			if (temp == customVar.rfAOn) cmdGo(2, 3, 3);
+			if (temp == customVar.rfBOn) cmdGo(3, 2, 3);
+			if (temp == customVar.rfCOn) cmdGo(3, 3, 2);
+			if (temp == customVar.rfOn) cmdGo(1, 1, 1);
+			if (temp == customVar.rfOff) cmdGo(0, 0, 0);
+		}
+		rfCode = temp;
 		mySwitch.resetAvailable();
 	}
 }
