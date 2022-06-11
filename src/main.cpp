@@ -10,12 +10,12 @@
 #include "IRsend.h"
 #include "webgui.h"
 
+// #define debugSerial Serial
 #define LED_PIN 2
 #define RESET_PIN 0
 #define PIR_PIN 5	//датчик руху
 #define IR_PIN 4	//RS пульт	4
 #define RF_PIN 1	//радіомодуль	1
-#define debugSerial Serial1
 
 int lightStatus, pirStatus, alarmStatus;
 unsigned long rfCode;
@@ -53,7 +53,9 @@ void AP_mode_default(){
 	WiFi.mode(WIFI_OFF);
 	WiFi.softAP(AP_ssid_default, AP_pass_default);
 	digitalWrite(LED_PIN, HIGH);
+#ifdef debugSerial
 	debugSerial.println("AP started");
+#endif
 }
 
 void STATION_mode(){
@@ -69,13 +71,18 @@ void STATION_mode(){
 	WiFi.begin(customVar.STA_ssid, customVar.STA_pass);
 	hold(100);
 	while (WiFi.status() != WL_CONNECTED){
-		delay(250); debugSerial.print(".");
+		delay(250);
+#ifdef debugSerial
+		debugSerial.print(".");
+#endif
 		if(WiFi.status() == WL_NO_SSID_AVAIL){}
 		if(WiFi.status() ==  WL_CONNECT_FAILED){}
 	}
 	blinker.detach();
 	digitalWrite(LED_PIN, HIGH);
+#ifdef debugSerial
 	debugSerial.println("\n STA started");
+#endif
 }
 
 void scanwifi_json() {
@@ -112,7 +119,9 @@ void scanwifi_json() {
 }
 
 void smart_res() {
+#ifdef debugSerial
 	debugSerial.println("Reset devise");
+#endif
 	WiFi.disconnect(true);
 	eepromapi.eeprom_clr();
 	hold(5000);
@@ -379,24 +388,24 @@ void startServer() {
     },[](){
 		HTTPUpload& upload = HTTP.upload();
 		if(upload.status == UPLOAD_FILE_START){
-			debugSerial.setDebugOutput(true);
+			// debugSerial.setDebugOutput(true);
 			WiFiUDP::stopAll();
-			debugSerial.printf("Update: %s\n", upload.filename.c_str());
+			// debugSerial.printf("Update: %s\n", upload.filename.c_str());
 			uint32_t maxSketchSpace = (ESP.getFreeSketchSpace() - 0x1000) & 0xFFFFF000;
 			if(!Update.begin(maxSketchSpace)){
-				Update.printError(debugSerial);
+				// Update.printError(debugSerial);
 			}
 		} else if(upload.status == UPLOAD_FILE_WRITE){
 			if(Update.write(upload.buf, upload.currentSize) != upload.currentSize){
-				Update.printError(debugSerial);
+				// Update.printError(debugSerial);
 			}
 		} else if(upload.status == UPLOAD_FILE_END){
 			if(Update.end(true)){
-				debugSerial.printf("Update Success: %u\nRebooting...\n", upload.totalSize);
+				// debugSerial.printf("Update Success: %u\nRebooting...\n", upload.totalSize);
 			} else {
-				Update.printError(debugSerial);
+				// Update.printError(debugSerial);
 			}
-			debugSerial.setDebugOutput(false);
+			// debugSerial.setDebugOutput(false);
 		}
 		yield();
     });
@@ -404,8 +413,10 @@ void startServer() {
 }
 
 void setup() {
-	debugSerial.begin(115200, SERIAL_8N1, SERIAL_TX_ONLY);
+#ifdef debugSerial
+	debugSerial.begin(115200, SERIAL_8N1, SERIAL_TX_ONLY); 
 	debugSerial.println("\n start");
+#endif
 	pinMode(PIR_PIN, INPUT_PULLUP);
 	pinMode(LED_PIN, OUTPUT);
 	digitalWrite(LED_PIN, LOW);
@@ -417,7 +428,9 @@ void setup() {
 	customVar = eepromapi.eeprom_get();
 	(customVar.wifimode == 0)? AP_mode_default(): STATION_mode();
 	if (MDNS.begin("iot-switch", WiFi.localIP())) {
+#ifdef debugSerial
 		debugSerial.println("\n MDNS responder started, name is http://iot-switch.local/");
+#endif
 	}
 	udp.begin(8266);
 	startServer();
